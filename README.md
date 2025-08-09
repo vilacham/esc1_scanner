@@ -315,10 +315,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📚 References
 
-- [Active Directory Certificate Services](https://docs.microsoft.com/en-us/windows-server/identity/ad-cs/ad-cs-overview)
-- [ESC1 Vulnerability Research](https://posts.specterops.io/certified-pre-owned-d95910965cd2)
-- [Windows Security Descriptors](https://docs.microsoft.com/en-us/windows/win32/secauthz/security-descriptors)
-- [Certificate Template Security](https://docs.microsoft.com/en-us/windows-server/identity/ad-cs/plan/security-and-protection)
+- [Certified Pre-Owned: Abusing Active Directory Certificate Services](https://specterops.io/wp-content/uploads/sites/3/2022/06/Certified_Pre-Owned.pdf)
+- [GitHub - GhostPack/Certify](https://github.com/GhostPack/Certify)
+- [GitHub - GhostPack/PSPKIAudit](https://github.com/GhostPack/PSPKIAudit)
+- [GitHub - jakehildreth/Locksmith](https://github.com/jakehildreth/Locksmith)
+- [GitHub - ly4k/Certipy](https://github.com/ly4k/Certipy)
+- [MS-ADTS: Active Directory Technical Specification](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/d2435927-0999-4c62-8c6d-13ba31a52e1a)
+- [MS-CRTD: Certificate Templates Structure](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-crtd/4c6950e4-1dc2-4ae3-98c3-b8919bb73822)
+- [MS-DTYP: Windows Data Types](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/cca27429-5689-4a16-b2b4-9325d93e4ba2)
+- [MS-WCCE: Windows Client Certificate Enrollment Protocol](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/446a0fca-7f27-4436-965d-191635518466)
 
 ---
 
