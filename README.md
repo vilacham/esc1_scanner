@@ -1,6 +1,6 @@
 # ESC1 Scanner
 
-> **The Schrödinger's ESC1 Vulnerability** - A comprehensive tool for auditing Active Directory Certificate Services to identify ESC1 (Escalation of Privilege via Certificate Templates) vulnerabilities.
+ > A comprehensive tool for auditing Active Directory Certificate Services to identify ESC1 (Escalation of Privilege via Certificate Templates) vulnerabilities.
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
