@@ -1,0 +1,32 @@
+# ESC1 Scanner Dependencies
+# Core dependencies for Active Directory and Windows security research
+
+# LDAP3 - Pure Python LDAP client library
+ldap3>=2.9.1,<3.0.0
+
+# Impacket - Network protocols library for Windows security research
+# Note: Impacket is actively maintained and frequently updated for security research
+impacket>=0.10.0,<1.0.0
+
+# Colored - Terminal text coloring library
+colored>=2.2.0,<3.0.0
+
+# Additional dependencies that may be needed for development/testing
+# Uncomment if you plan to add these features:
+
+# # For development and testing
+# pytest>=7.0.0,<8.0.0
+# pytest-cov>=4.0.0,<5.0.0
+# black>=23.0.0,<24.0.0
+# flake8>=6.0.0,<7.0.0
+# mypy>=1.0.0,<2.0.0
+
+# # For enhanced CLI experience
+# click>=8.0.0,<9.0.0
+# rich>=13.0.0,<14.0.0
+
+# # For configuration management
+# pyyaml>=6.0.0,<7.0.0
+
+# # For logging improvements
+# structlog>=23.0.0,<24.0.0 
