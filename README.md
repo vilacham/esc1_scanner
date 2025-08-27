@@ -132,6 +132,9 @@ python esc1_scanner.py -u username@domain.com -p password --vulnerable
 # Verbose output with detailed ACE information
 python esc1_scanner.py -u username@domain.com -p password --verbose
 
+# Skip CA permissions enumeration via RPC (faster, less likely to trigger alerts)
+python esc1_scanner.py -u username@domain.com -p password --skip-ca-permissions-enum
+
 # Specify domain controller IP
 python esc1_scanner.py -u username@domain.com -p password --dc_ip 192.168.1.10
 
@@ -153,6 +156,7 @@ python esc1_scanner.py -u username@domain.com -P
 | `--enabled` | Show only enabled templates | No |
 | `--vulnerable` | Show only vulnerable templates | No |
 | `--verbose` | Detailed ACE information | No |
+| `--skip-ca-permissions-enum` | Skip CA permissions enumeration via RPC | No |
 
 *One authentication method is required
 

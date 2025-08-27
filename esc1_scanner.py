@@ -525,7 +525,7 @@ def get_sam_account_name_from_sid(connection, domain, sid_str):
 
         if connection.search(
             search_base, search_filter, attributes=attributes, search_scope=search_scope
-        ):  # This LDAP search should only return one result
+        ) and len(connection.entries) > 0:  # This LDAP search should only return one result
             entry = connection.entries[0]
             sam_account_name = str(entry["sAMAccountName"])
 
@@ -533,6 +533,7 @@ def get_sam_account_name_from_sid(connection, domain, sid_str):
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return ""
 
 
 def get_sid_from_sam_account_name(connection, domain, sam_str):
@@ -557,7 +558,7 @@ def get_sid_from_sam_account_name(connection, domain, sam_str):
 
         if connection.search(
             search_base, search_filter, attributes=attributes, search_scope=search_scope
-        ):  # This LDAP search should only return one result
+        ) and len(connection.entries) > 0:  # This LDAP search should only return one result
             entry = connection.entries[0]
             sid = str(entry["objectSid"])
 
@@ -565,6 +566,7 @@ def get_sid_from_sam_account_name(connection, domain, sam_str):
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return ""
 
 
 def establish_ldap_connection(domain, user, password="", dc_ip="", pth=False):
@@ -616,7 +618,7 @@ def establish_ldap_connection(domain, user, password="", dc_ip="", pth=False):
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
     return None
 # Enumeration functions
-def enumerate(user, password, ca="", template="", dc_ip="", enabled=False, print_only_vulnerable=False, verbose=False, pth=False):
+def enumerate(user, password, ca="", template="", dc_ip="", enabled=False, print_only_vulnerable=False, verbose=False, pth=False, skip_ca_permissions=False):
     """
     Orchestrate ESC1 enumeration across LDAP, CAs, and templates.
 
@@ -637,6 +639,7 @@ def enumerate(user, password, ca="", template="", dc_ip="", enabled=False, print
         print_only_vulnerable (bool): If True, print only potentially vulnerable templates
         verbose (bool): If True, include detailed ACE information
         pth (bool): If True, use Pass-the-Hash authentication
+        skip_ca_permissions (bool): If True, skip CA permissions enumeration via RPC
     """
     domain = user.split("@")[1]
     user = user.split("@")[0]
@@ -649,7 +652,7 @@ def enumerate(user, password, ca="", template="", dc_ip="", enabled=False, print
 
     user_sids = enum_user_sids(ldap_connection, domain, user, low_priv_sids)
 
-    certification_authorities = enumerate_certification_authorities(ldap_connection, domain, user, password, ca, pth)
+    certification_authorities = enumerate_certification_authorities(ldap_connection, domain, user, password, ca, pth, skip_ca_permissions)
 
     certificate_templates = enumerate_certificate_templates(ldap_connection, domain, certification_authorities, user_sids, admin_sids, enabled, template)
 
@@ -679,7 +682,8 @@ def enum_low_priv_sids(connection, domain):
         low_priv_sam_account_names = ["Domain Users", "Domain Computers"]
         for sam in low_priv_sam_account_names:
             sid = get_sid_from_sam_account_name(connection, domain, sam)
-            low_priv_sids[sid] = sam
+            if sid:  # Only add if SID is not empty
+                low_priv_sids[sid] = sam
 
         ALL_SID.update(low_priv_sids)
 
@@ -687,6 +691,7 @@ def enum_low_priv_sids(connection, domain):
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return {}
 
 
 def enum_admin_sids(connection, domain):
@@ -722,7 +727,8 @@ def enum_admin_sids(connection, domain):
         ]
         for sam in admin_sam_account_names:
             sid = get_sid_from_sam_account_name(connection, domain, sam)
-            admin_sids[sid] = sam
+            if sid:  # Only add if SID is not empty
+                admin_sids[sid] = sam
 
         ALL_SID.update(admin_sids)
 
@@ -730,6 +736,7 @@ def enum_admin_sids(connection, domain):
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return {}
 
 
 def enum_user_sids(connection, domain, user, low_priv_sids):
@@ -759,7 +766,7 @@ def enum_user_sids(connection, domain, user, low_priv_sids):
 
         if connection.search(
             search_base, search_filter, attributes=attributes, search_scope=search_scope
-        ):  # This LDAP search should only return one result
+        ) and len(connection.entries) > 0:  # This LDAP search should only return one result
             current_user = connection.entries[0]
 
             current_user_sid = str(current_user["objectSid"])
@@ -768,7 +775,7 @@ def enum_user_sids(connection, domain, user, low_priv_sids):
             primary_group_sid = f"{'-'.join(current_user_sid.split('-')[:-1])}-{str(current_user['primaryGroupId'])}"
             search_filter = f"(objectSid={primary_group_sid})"
             attributes = ["sAMAccountName"]
-            if connection.search(search_base, search_filter, attributes=attributes, search_scope=search_scope):
+            if connection.search(search_base, search_filter, attributes=attributes, search_scope=search_scope) and len(connection.entries) > 0:
                 primary_group_name = str(connection.entries[0]["sAMAccountName"])
                 user_sids[primary_group_sid] = primary_group_name
             else:
@@ -784,7 +791,7 @@ def enum_user_sids(connection, domain, user, low_priv_sids):
                 search_filter = f"(distinguishedName={group_dn})"
                 attributes = ["objectSid", "memberOf", "sAMAccountName"]
 
-                if connection.search(search_base, search_filter, attributes=attributes, search_scope=search_scope):
+                if connection.search(search_base, search_filter, attributes=attributes, search_scope=search_scope) and len(connection.entries) > 0:
                     group = connection.entries[0]
 
                     group_sid = str(group["objectSid"])
@@ -811,9 +818,10 @@ def enum_user_sids(connection, domain, user, low_priv_sids):
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return {}
 
 
-def enumerate_certification_authorities(connection, domain, user, password, ca="", pth=False):
+def enumerate_certification_authorities(connection, domain, user, password, ca="", pth=False, skip_ca_permissions=False):
     """
     Enumerate certification authorities from Active Directory.
     
@@ -828,6 +836,7 @@ def enumerate_certification_authorities(connection, domain, user, password, ca="
         password (str): Password or NTLM hash
         ca (str): Specific CA name to search for (optional)
         pth (bool): Whether using pass-the-hash authentication
+        skip_ca_permissions (bool): Whether to skip CA permissions enumeration via RPC
         
     Returns:
         dict: CA information including DNS, DN, supported templates, configuration bytes, and parsed permissions
@@ -891,12 +900,16 @@ def enumerate_certification_authorities(connection, domain, user, password, ca="
             for ca_name, _ in certification_authorities.items():
                 print(f"{TAB * 3}{ca_name}")
 
-        certification_authorities = enumerate_certification_authorities_configurations(connection, certification_authorities, domain, user, password, pth)
+        if not skip_ca_permissions:
+            certification_authorities = enumerate_certification_authorities_configurations(connection, certification_authorities, domain, user, password, pth)
+        else:
+            print(f"\n{COLORS['blue']}[*] {COLORS['white']}Skipping CA permissions enumeration (--skip-ca-permissions-enum flag set)")
 
         return certification_authorities
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return {}
 
 
 def enumerate_certification_authorities_configurations(connection, ca_dict, domain, user, password, pth=False):
@@ -1031,7 +1044,10 @@ def enumerate_certification_authorities_permissions(ca_permissions_dict, permiss
                 sid_bytes = dacl_bytes[current_offset:current_offset + sid_size]
                 sid = convert_sid_bytes_to_str(sid_bytes)
 
-                ca_permissions_dict[access_mask].add(sid)
+                # Decompose the access mask into individual permission bits
+                for permission_bit in CA_PERMISSIONS_ACCESS_MASKS.keys():
+                    if access_mask & permission_bit:  # Check if this permission bit is set
+                        ca_permissions_dict[permission_bit].add(sid)
 
                 current_offset += sid_size
 
@@ -1039,6 +1055,7 @@ def enumerate_certification_authorities_permissions(ca_permissions_dict, permiss
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return ca_permissions_dict
 
 
 def enumerate_certificate_templates(connection, domain, ca_dict, user_sids, privileged_sids, enum_only_enabled, template_to_enum=""):
@@ -1109,17 +1126,17 @@ def enumerate_certificate_templates(connection, domain, ca_dict, user_sids, priv
                         if "msPKI-Enrollment-Flag" in template
                         else ""
                     )  # Manager approval -> CT_FLAG_PEND_ALL_REQUESTS (0x2)
-            template_certificate_name_flags = (
-                int(template["msPKI-Certificate-Name-Flag"].raw_values[0])
-                if "msPKI-Certificate-Name-Flag" in template
-                else ""
-            )  # Requesters can specify a subjectAltName in the CSR -> CT_FLAG_ENROLEE_SUPPLIES_SUBJECT
+                    template_certificate_name_flags = (
+                        int(template["msPKI-Certificate-Name-Flag"].raw_values[0])
+                        if "msPKI-Certificate-Name-Flag" in template
+                        else ""
+                    )  # Requesters can specify a subjectAltName in the CSR -> CT_FLAG_ENROLEE_SUPPLIES_SUBJECT
                     template_recovery_agent_signatures = (
                         str(template["msPKI-RA-Signature"]) if "msPKI-RA-Signature" in template else ""
                     )  # Requires CSRs to be signed by an existing authorized certificate
-            template_eku_list = (
-                list(template["pkiExtendedKeyUsage"]) if "pkiExtendedKeyUsage" in template else ""
-            )  # EKUs that enable authentication -> Client Authentication, PKINIT Client Authentication, Smart Card Logon, Any Purpose, or no EKU
+                    template_eku_list = (
+                        list(template["pkiExtendedKeyUsage"]) if "pkiExtendedKeyUsage" in template else ""
+                    )  # EKUs that enable authentication -> Client Authentication, PKINIT Client Authentication, Smart Card Logon, Any Purpose, or no EKU
                     template_security_descriptor = (
                         template["ntSecurityDescriptor"].raw_values[0]
                         if "ntSecurityDescriptor" in template
@@ -1127,6 +1144,12 @@ def enumerate_certificate_templates(connection, domain, ca_dict, user_sids, priv
                     )
 
                     template_owner, template_group, template_dacl = parse_security_descriptor(template_security_descriptor)
+
+                    # Resolve owner and group SIDs to usernames and add to ALL_SID
+                    if template_owner and template_owner not in ALL_SID:
+                        ALL_SID[template_owner] = get_sam_account_name_from_sid(connection, domain, template_owner)
+                    if template_group and template_group not in ALL_SID:
+                        ALL_SID[template_group] = get_sam_account_name_from_sid(connection, domain, template_group)
 
                     certificate_templates[template_name] = {
                         "enabled_in": template_enabled_in,
@@ -1140,14 +1163,16 @@ def enumerate_certificate_templates(connection, domain, ca_dict, user_sids, priv
                         "dacl": template_dacl,
                     }
 
-                if len(connection.entries) == 1 and not enum_only_enabled:
+                template_count = len(certificate_templates)
+                if template_count == 1 and not enum_only_enabled:
                     print(f"{COLORS['green']}[+] {COLORS['white']}Found 1 certificate template:")
-                elif len(connection.entries) == 1 and enum_only_enabled:
+                elif template_count == 1 and enum_only_enabled:
                     print(f"{COLORS['green']}[+] {COLORS['white']}Found 1 enabled certificate template:")
-                elif len(connection.entries) > 1 and not enum_only_enabled:
-                    print(f"{COLORS['green']}[+] {COLORS['white']}Found {len(connection.entries)} certificate templates:")
+                elif template_count > 1 and not enum_only_enabled:
+                    print(f"{COLORS['green']}[+] {COLORS['white']}Found {template_count} certificate templates:")
                 else:
-                    print(f"{COLORS['green']}[+] {COLORS['white']}Found {len(enabled_certificates)} enabled certificate templates:")
+                    enabled_count = len([t for t in certificate_templates.values() if t["enabled_in"]])
+                    print(f"{COLORS['green']}[+] {COLORS['white']}Found {enabled_count} enabled certificate templates:")
 
         if len(certificate_templates) > 0:
             for template_name, template_info in certificate_templates.items():
@@ -1161,6 +1186,7 @@ def enumerate_certificate_templates(connection, domain, ca_dict, user_sids, priv
 
     except Exception as e:
         print(f"{COLORS['red']}[-] {COLORS['white']}{e}")
+        return {}
 
 
 def parse_security_descriptor(security_descriptor_bytes):
@@ -1366,10 +1392,13 @@ def check_ca_enrollment(user_sids, ca_dict, template_info_dict):
     ca_enrollment_allowed_sids = set()
 
     for certification_authority in template_info_dict["enabled_in"]:
-        sids_allowed_to_enroll = ca_dict[certification_authority]["ca_permissions"][0x00000200]
-        for user_sid in user_sids:
-            if user_sid in sids_allowed_to_enroll:
-                ca_enrollment_allowed_sids.add(user_sid)
+        ca_permissions = ca_dict[certification_authority]["ca_permissions"]
+        # Check if CA permissions were successfully enumerated and contains the Enroll permission
+        if ca_permissions and 0x00000200 in ca_permissions:
+            sids_allowed_to_enroll = ca_permissions[0x00000200]
+            for user_sid in user_sids:
+                if user_sid in sids_allowed_to_enroll:
+                    ca_enrollment_allowed_sids.add(user_sid)
 
     if len(ca_enrollment_allowed_sids) > 0:
         user_can_request_certificates = True
@@ -1559,7 +1588,7 @@ def print_enumeration_output(certification_authorities_dict, certificate_templat
                     continue
                 print(f"{TAB * 3}{COLORS['cyan']}{permission:#010x} {CA_PERMISSIONS_ACCESS_MASKS[permission][0]} -> {COLORS['white']}{CA_PERMISSIONS_ACCESS_MASKS[permission][1]}")
                 for sid in sid_set:
-                    if sid in user_sids and permission == 0x00000200:
+                    if permission == 0x00000200:
                         print(f"{TAB * 4}{COLORS['orange']}{domain}\\{ALL_SID[sid]} ({sid})")
                     else:
                         print(f"{TAB * 4}{domain}\\{ALL_SID[sid]} ({sid})")
@@ -1610,13 +1639,16 @@ def print_enumeration_output(certification_authorities_dict, certificate_templat
 
         print(f"{TAB * 2}{COLORS['cyan']}Extended Key Usages:")
         for eku in template_info["eku_list"]:
-            print(f"{TAB * 3}{COLORS['white']}{eku}: {EKUS[eku]}")
+            eku_description = EKUS.get(eku, "Unknown EKU")
+            print(f"{TAB * 3}{COLORS['white']}{eku}: {eku_description}")
         if template_info["defines_authentication_eku"]:
             print(f"{TAB * 3}{COLORS['orange']}EKUs enable authentication")
 
         print(f"{TAB * 2}{COLORS['cyan']}Security Descriptor Audit:")
-        print(f"{TAB * 3}{COLORS['cyan']}Owner -> {COLORS['white']}{domain}\\{ALL_SID[template_info['owner']]} ({template_info['owner']})")
-        print(f"{TAB * 3}{COLORS['cyan']}Group -> {COLORS['white']}{domain}\\{ALL_SID[template_info['group']]} ({template_info['group']})")
+        owner_name = ALL_SID.get(template_info['owner'], 'Unknown')
+        group_name = ALL_SID.get(template_info['group'], 'Unknown')
+        print(f"{TAB * 3}{COLORS['cyan']}Owner -> {COLORS['white']}{domain}\\{owner_name} ({template_info['owner']})")
+        print(f"{TAB * 3}{COLORS['cyan']}Group -> {COLORS['white']}{domain}\\{group_name} ({template_info['group']})")
 
         dacl = template_info["dacl"]
         print(f"{TAB * 2}{COLORS['cyan']}DACL audit:")
@@ -1673,6 +1705,7 @@ def main():
     parser.add_argument("--enabled", action="store_true", help="Print only enabled templates")
     parser.add_argument("--vulnerable", action="store_true", help="Print only vulnerable templates")
     parser.add_argument("--verbose", action="store_true", help="Print detailed information about ACEs")
+    parser.add_argument("--skip-ca-permissions-enum", action="store_true", help="Skip CA permissions enumeration via RPC")
 
     args = parser.parse_args()
 
@@ -1698,6 +1731,8 @@ def main():
             args.enabled,
             args.vulnerable,
             args.verbose,
+            False,  # pth
+            getattr(args, 'skip_ca_permissions_enum', False),
         )
     else:
         enumerate(
@@ -1710,6 +1745,7 @@ def main():
             args.vulnerable,
             args.verbose,
             pth,
+            getattr(args, 'skip_ca_permissions_enum', False),
         )
 
 if __name__ == "__main__":
