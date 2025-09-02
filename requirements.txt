@@ -11,6 +11,9 @@ impacket>=0.10.0,<1.0.0
 # Colored - Terminal text coloring library
 colored>=2.2.0,<3.0.0
 
+# PyCryptodome - Cryptographic library (AES, RSA, etc.)
+pycryptodome>=3.19.0,<4.0.0
+
 # Additional dependencies that may be needed for development/testing
 # Uncomment if you plan to add these features:
 
